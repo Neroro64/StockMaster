@@ -31,10 +31,14 @@ A ML/DL model that uses the indicators and the prices to predict future movement
     2. Momentum
     3. Derivative of price change
 
-### Strategist
-    A program that takes outputs from the Predictor and determines the best (most-profitable) action policy.
-    The idea is that there are a number of presets of parameters (risk acceptance, profit/loss ratios etc), and the program form policies based on the presets, and ran simulations of historical data (with predictions) to test each policy. 
+#### Libraries:
+    Tensorflow
+    Scipy
 
-    With other words, given the predictions (% up, % down), the program returns a table of max profit and its probability, max loss and its probability and determine whether go bull or bear based on the presets.
+### Strategist
+A program that takes outputs from the Predictor and determines the best (most-profitable) action policy.
+The idea is that there are a number of presets of parameters (risk acceptance, profit/loss ratios etc), and the program form policies based on the presets, and ran simulations of historical data (with predictions) to test each policy. 
+
+With other words, given the predictions (% up, % down), the program returns a table of max profit and its probability, max loss and its probability and determine whether go bull or bear based on the presets.
 
 
