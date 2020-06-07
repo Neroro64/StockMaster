@@ -26,12 +26,16 @@ def pull_inv(appid, Res="15", Symbol=172, Start="2020-01-01", End="2020-04-28"):
 
 
 def pull_yahoo(ticker, start, end, interval,INDEX="DAX"):
-    data = get_date(ticker, start_date=start, end_date=end,interval=interval)
+    data = get_data(ticker, start_date=start, end_date=end,interval=interval)
     data.to_csv(r"./Data/{}/{}{}-{}.csv".format(INDEX, interval, start, end))
     # print(get_analysts_info("^GDAXI"))
-    # dax_history_daily = get_data("^GDAXI", start_date='01/01/1999', end_date='28/04/2020', interval="1d")
-    # dax_history_daily.to_csv(r"./Data/DAX/[Daily]1999_01_01-2020_04_28.csv")
     # dax_history_daily = get_data("^GDAXI", start_date='01/01/1999', end_date='28/04/2020', interval="1wk")
     # dax_history_daily.to_csv(r"./Data/DAX/[Weekly]1999_01_01-2020_04_28.csv")
     # dax_history_daily = get_data("^GDAXI", start_date='01/01/1999', end_date='28/04/2020', interval="1mo")
     # dax_history_daily.to_csv(r"./Data/DAX/[Monthly]1999_01_01-2020_04_28.csv")
+
+def pull_dax(start, end, interval):
+    data = get_data("^GDAXI", start_date=start, end_date=end, interval=interval)
+    data.to_csv(r"Data/DAX/{}.csv".format(interval))
+
+
