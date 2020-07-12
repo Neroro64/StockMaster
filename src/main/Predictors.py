@@ -8,14 +8,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import BayesianRidge
 import plotly.express as px
+import DataManager
+
+PATH = "/models/"
+RF_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle"]
+BAYES_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle", "ema-cross", "rsi", "stoch-diff", "sar-diff", "macdsignal"]
+MLP_FEATURES = ["1-rad", "inter-derivative", 
+                    "bb-upper", "bb-lower", "bb-middle", 
+                    "ema-cross", "macdsignal", "macdhist", "macd", 
+                    "rsi", "sar-diff", "stoch-diff", 
+                    "intra-derivative", "1-err", "intra-diff"]
+
 
 def normalize(x):
     mean = np.mean(x, axis=0, keepdims=True)
     std = np.std(x, axis=0, keepdims=True)
     return (x - mean) / std
 
-def random_forests_train(data, filename=None, N=1000, max_depth=30, seed=2020, verbose=True):
-    feature_list = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle"]
+def random_forests_train(data, test_size=0.2, filename=None, N=1000, max_depth=30, seed=2020, verbose=True):
+    feature_list = RF_FEATURES
     features = data[feature_list]#[:-1]
     features = features.values[:-1]
 
@@ -23,7 +34,7 @@ def random_forests_train(data, filename=None, N=1000, max_depth=30, seed=2020, v
     targets = targets.values[1:]
 
     # Using Skicit-learn to split data into training and testing sets
-    train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = 0.20, random_state = seed)
+    train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = seed)
 
 
     rf = RandomForestRegressor(n_estimators = N, random_state = seed, max_depth=max_depth, criterion="mae")# Train the model on training data
@@ -55,22 +66,27 @@ def random_forests_train(data, filename=None, N=1000, max_depth=30, seed=2020, v
         fig.show()
 
     if not filename == None:
-        with open(filename, 'wb') as f:
+        with open(PATH+filename+".model", 'wb') as f:
             pickle.dump(rf, f)
     return rf
 
-def bayes_train(data, filename=None, seed=2020, verbose=True):
-     feature_list = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle", "ema-cross", "rsi", "stoch-diff", "sar-diff", "macdsignal"]
-     features = data[feature_list]#[:-1]
-     features = features.values[:-1]
+def random_forests_load(filename):
+    rf = pickle.load(PATH+filename+".model")
+    return (rf, RF_FEATURES)
 
-     targets = data["inter-diff"]#[1:]
-     targets = targets.values[1:]
 
-     train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = 0.20, random_state = 2020)
+def bayes_train(data, test_size=0.2, filename=None, seed=2020, verbose=True):
+    feature_list = BAYES_FEATURES
+    features = data[feature_list]#[:-1]
+    features = features.values[:-1]
 
-     clf = BayesianRidge(compute_score=True)
-     clf.fit(train_features, train_labels)
+    targets = data["inter-diff"]#[1:]
+    targets = targets.values[1:]
+
+    train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
+
+    clf = BayesianRidge(compute_score=True)
+    clf.fit(train_features, train_labels)
 
     if verbose:
         # Use the forest's predict method on the test data
@@ -91,17 +107,16 @@ def bayes_train(data, filename=None, seed=2020, verbose=True):
         fig = px.scatter(x=predictions, y=test_labels)
         fig.show()
     if not filename == None:
-        with open(filename, 'wb') as f:
+        with open(PATH+filename+".model", 'wb') as f:
             pickle.dump(clf, f)
     return clf
 
-def mlp_train(data, batch_size=100, epochs=600):
-    feature_list = ["1-rad", "inter-derivative", 
-                    "bb-upper", "bb-lower", "bb-middle", 
-                    "ema-cross", "macdsignal", "macdhist", "macd", 
-                    "rsi", "sar-diff", "stoch-diff", 
-                    "intra-derivative", "1-err", "intra-diff"]
+def bayes_load(filename):
+    bayes = pickle.load(PATH+filename+".model")
+    return (bayes,BAYES_FEATURES)
 
+def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=600):
+    feature_list = MLP_FEATURES
     N = len(feature_list)
     features = data[feature_list][:-1]
     features = features.values
@@ -110,13 +125,13 @@ def mlp_train(data, batch_size=100, epochs=600):
     targets = data["inter-diff"][1:]
     targets = targets.values
 
-    train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = 0.20, random_state = 2020)
+    train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(N),
         tf.keras.layers.Dense(2*N, activation='relu'),
         tf.keras.layers.Dense(N, activation='relu'),
         tf.keras.layers.Dense(1)
-        ])
+        ]) 
 
     model.compile(optimizer='adam',
               loss=tf.keras.losses.MeanAbsoluteError(),
@@ -125,7 +140,91 @@ def mlp_train(data, batch_size=100, epochs=600):
 
     model.fit(train_features, train_labels, epochs=epochs, batch_size=batch_size)
     model.evaluate(test_features,  test_labels, verbose=2)
+
+    if not filename == None:
+        model.save(PATH+filename+".h5")
+
+    return model
+
+def mlp_load(filename):
+    model = tf.keras.models.load_model(PATH+filename+".model")
+    return (model, MLP_FEATURES)
+
+
+def predict(predictor, data):
+    model = predictor[0]
+    feature_list = predictor[1]
+
+    features = data[feature_list].values
+    predictions = model.predict(features)
+    return predictions
+
+def evaluate(predictor, data, target):
+    model = predictor[0]
+    feature_list = predictor[1]
+
+    features = data[feature_list][:-1].values
+    labels = data[target][1:].values
+
+    predictions = model.predict(features)
+    mae = np.mean(np.abs(labels - predictions)) 
+    std = np.std(labels-predictions)
+
+    return predictions, mae, std
+
+def compile_result(name, predictor, data, target="inter-diff", file=None):
+    if not file == None:
+        result_file = DataManager.load(file)
+    else:
+        result_file = pd.DataFrame(data={name+"_actual":[], name+"_predicted":[], name+"_MAE":[], name+"_SPREAD":[]})
+
+    predictions, mae, std = evaluate(predictor, data, target)
+    results = pd.DataFrame(data={
+        name+"_actual" : data[target],
+        name+"_predicted" : predictions,
+        name+"_MAE" : mae,
+        name+"_SPREAD" : std
+    })
+    result_file.append(results, ignore_index=True)
+    if not file == None:
+        DataManager.save(file, result_file)
+    else:
+        DataManager.save("results", result_file)
+
+    return predictions, mae, std
+
+def train_eval_save(name, data, test_size=0.2, filename=None, log=False):
+    if name == "RF":
+        model = random_forests_train(data, test_size, filename=filename, N=1000, max_depth=30, seed=2020, verbose=True)
+        feature_list = RF_FEATURES
+    elif name == "BAYES":
+        model = bayes_train(data, test_size, filename=filename, seed=2020, verbose=True)
+        feature_list = BAYES_FEATURES
+    elif name == "MLP":
+        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=600)
+        feature_list = MLP_FEATURES
+    else:
+        return -1
     
+    predictions, mae, std = compile_result(name, (model, feature_list), data, "inter-diff")
+    if log:
+        print(predictions)
+        print(mae)
+        print(std)
+    
+
+
+
+
+
+
+
+
+
+
+    
+
+
 
         
     
