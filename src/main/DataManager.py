@@ -7,8 +7,8 @@ from scipy import stats
 import math
 from DataPuller import pull_dax
 
-PATH = "../Data/DAX/yahoo_fin/"
 
+PATH = "~/Documents/StockMaster/Data/DAX/yahoo_fin/"
 def load(filename="1d"):
      data = pd.read_csv(PATH+"{}.csv".format(filename))
      return data
@@ -27,7 +27,8 @@ def clean(data):
     else:
         samples = data
     
-    samples = samples.drop(columns=[samples.columns[0], "ticker", "adjclose"])
+    # samples = samples.drop(columns=[samples.columns[0], "ticker", "adjclose"])
+    samples = samples[["open", "close", "high", "low"]]
 
     samples.reset_index(drop=True, inplace=True)
     samples = samples.drop(np.where(np.isnan(samples["close"]))[0])
@@ -78,11 +79,12 @@ def compute_direction(data, period=1):
         errors[i] = math.atan(std_err)
     return rad, errors
 
-def prepare(raw, clean=True):
-    if clean:
+def prepare(raw, cl=True):
+    if cl:
         data = clean(raw)
     else:
         data = raw
+
 
     intra_diff = compute_diff(data, intra=True)
     inter_diff = compute_diff(data, intra=False)
@@ -159,12 +161,16 @@ def pull_prepare_save(start, end, interval):
     raw = pull_dax(start, end, interval)
     data = prepare(raw)
     save("{}-{}:{}".format(start,end, interval), data)
+    return data
 
 def pull_append_prepare_save(start, end, interval, data):
     raw = pull_dax(start, end, interval)
+    raw = clean(raw)
+    new_data = data[-200:].append(raw, ignore_index=True)
+    new_data = prepare(new_data, False)
 
-    new_data = data[-200:].append(raw[["open", "close", "high", "low"]], ignore_index=True)
-    data = data[:-200].append(prepare(new_data, False))
+    data = data.append(new_data[200:])
+    save("{}-{}:{}".format(start,end, interval), data)
     return data
 
 

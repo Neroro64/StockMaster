@@ -10,7 +10,7 @@ from sklearn.linear_model import BayesianRidge
 import plotly.express as px
 import DataManager
 
-PATH = "/models/"
+PATH = "~/Documents/StockMaster/src/models/"
 RF_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle"]
 BAYES_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle", "ema-cross", "rsi", "stoch-diff", "sar-diff", "macdsignal"]
 MLP_FEATURES = ["1-rad", "inter-derivative", 
@@ -28,7 +28,8 @@ def normalize(x):
 def random_forests_train(data, test_size=0.2, filename=None, N=1000, max_depth=30, seed=2020, verbose=True):
     feature_list = RF_FEATURES
     features = data[feature_list]#[:-1]
-    features = features.values[:-1]
+    features = np.nan_to_num(features.values[:-1])
+    features = normalize(features)
 
     targets = data["inter-diff"]#[1:]
     targets = targets.values[1:]
@@ -78,7 +79,8 @@ def random_forests_load(filename):
 def bayes_train(data, test_size=0.2, filename=None, seed=2020, verbose=True):
     feature_list = BAYES_FEATURES
     features = data[feature_list]#[:-1]
-    features = features.values[:-1]
+    features = np.nan_to_num(features.values[:-1])
+    features = normalize(features)
 
     targets = data["inter-diff"]#[1:]
     targets = targets.values[1:]
@@ -115,11 +117,11 @@ def bayes_load(filename):
     bayes = pickle.load(PATH+filename+".model")
     return (bayes,BAYES_FEATURES)
 
-def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=600):
+def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
     feature_list = MLP_FEATURES
     N = len(feature_list)
-    features = data[feature_list][:-1]
-    features = features.values
+    features = data[feature_list]
+    features = np.nan_to_num(features.values[:-1])
     features = normalize(features)
 
     targets = data["inter-diff"][1:]
@@ -128,8 +130,10 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=600):
     train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(N),
+        tf.keras.layers.Dense(4*N, activation='relu'),
         tf.keras.layers.Dense(2*N, activation='relu'),
         tf.keras.layers.Dense(N, activation='relu'),
+        tf.keras.layers.Dense(N/2, activation='relu'),
         tf.keras.layers.Dense(1)
         ]) 
 
@@ -142,7 +146,7 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=600):
     model.evaluate(test_features,  test_labels, verbose=2)
 
     if not filename == None:
-        model.save(PATH+filename+".h5")
+        model.save(filename+".h5")
 
     return model
 
@@ -163,37 +167,39 @@ def evaluate(predictor, data, target):
     model = predictor[0]
     feature_list = predictor[1]
 
-    features = data[feature_list][:-1].values
+    features = np.nan_to_num(data[feature_list][:-1].values)
+    features = normalize(features)
     labels = data[target][1:].values
+    labels = np.reshape(labels, (len(labels),1))
 
     predictions = model.predict(features)
-    mae = np.mean(np.abs(labels - predictions)) 
-    std = np.std(labels-predictions)
+    ae = np.abs(labels - predictions)
+    mae = np.mean(ae)
+    std = np.std(ae)
 
-    return predictions, mae, std
+    return predictions, ae, mae, std
 
 def compile_result(name, predictor, data, target="inter-diff", file=None):
-    if not file == None:
-        result_file = DataManager.load(file)
-    else:
-        result_file = pd.DataFrame(data={name+"_actual":[], name+"_predicted":[], name+"_MAE":[], name+"_SPREAD":[]})
 
-    predictions, mae, std = evaluate(predictor, data, target)
+    predictions, ae, mae, std = evaluate(predictor, data, target)
     results = pd.DataFrame(data={
-        name+"_actual" : data[target],
-        name+"_predicted" : predictions,
+        name+"_actual" : data[target][1:],
+        name+"_predicted" : predictions.ravel(),
+        name+"_AE" : ae.ravel(),
         name+"_MAE" : mae,
         name+"_SPREAD" : std
     })
-    result_file.append(results, ignore_index=True)
+
     if not file == None:
+        result_file = DataManager.load(file)
+        result_file.append(results, ignore_index=True)
         DataManager.save(file, result_file)
     else:
-        DataManager.save("results", result_file)
+        DataManager.save("results", results)
 
     return predictions, mae, std
 
-def train_eval_save(name, data, test_size=0.2, filename=None, log=False):
+def train_eval_save(name, data, test_size=0.2, filename=None, log=True):
     if name == "RF":
         model = random_forests_train(data, test_size, filename=filename, N=1000, max_depth=30, seed=2020, verbose=True)
         feature_list = RF_FEATURES
@@ -207,10 +213,12 @@ def train_eval_save(name, data, test_size=0.2, filename=None, log=False):
         return -1
     
     predictions, mae, std = compile_result(name, (model, feature_list), data, "inter-diff")
-    if log:
-        print(predictions)
-        print(mae)
-        print(std)
+    # if log:
+    #     print("Training results: ")
+    #     print(predictions)
+    #     print(mae)
+    #     print(std)
+    #     print("-"*70)
     
 
 
