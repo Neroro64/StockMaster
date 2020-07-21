@@ -67,12 +67,12 @@ def random_forests_train(data, test_size=0.2, filename=None, N=1000, max_depth=3
         fig.show()
 
     if not filename == None:
-        with open(PATH+filename+".model", 'wb') as f:
+        with open(filename+".model", 'wb') as f:
             pickle.dump(rf, f)
     return rf
 
 def random_forests_load(filename):
-    rf = pickle.load(PATH+filename+".model")
+    rf = pickle.load(filename+".model")
     return (rf, RF_FEATURES)
 
 
@@ -109,7 +109,7 @@ def bayes_train(data, test_size=0.2, filename=None, seed=2020, verbose=True):
         fig = px.scatter(x=predictions, y=test_labels)
         fig.show()
     if not filename == None:
-        with open(PATH+filename+".model", 'wb') as f:
+        with open(filename+".model", 'wb') as f:
             pickle.dump(clf, f)
     return clf
 
@@ -167,12 +167,11 @@ def evaluate(predictor, data, target):
     model = predictor[0]
     feature_list = predictor[1]
 
-    features = np.nan_to_num(data[feature_list][:-1].values)
+    features = np.nan_to_num(data[feature_list].values[:-1])
     features = normalize(features)
     labels = data[target][1:].values
-    labels = np.reshape(labels, (len(labels),1))
 
-    predictions = model.predict(features)
+    predictions = model.predict(features).ravel()
     ae = np.abs(labels - predictions)
     mae = np.mean(ae)
     std = np.std(ae)
@@ -195,11 +194,11 @@ def compile_result(name, predictor, data, target="inter-diff", file=None):
         result_file.append(results, ignore_index=True)
         DataManager.save(file, result_file)
     else:
-        DataManager.save("results", results)
+        DataManager.save("results_tot", results)
 
     return predictions, mae, std
 
-def train_eval_save(name, data, test_size=0.2, filename=None, log=True):
+def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
     if name == "RF":
         model = random_forests_train(data, test_size, filename=filename, N=1000, max_depth=30, seed=2020, verbose=True)
         feature_list = RF_FEATURES
@@ -207,7 +206,7 @@ def train_eval_save(name, data, test_size=0.2, filename=None, log=True):
         model = bayes_train(data, test_size, filename=filename, seed=2020, verbose=True)
         feature_list = BAYES_FEATURES
     elif name == "MLP":
-        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=600)
+        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=1200)
         feature_list = MLP_FEATURES
     else:
         return -1
