@@ -85,13 +85,12 @@ def prepare(raw, cl=True):
     else:
         data = raw
 
-
     intra_diff = compute_diff(data, intra=True)
     inter_diff = compute_diff(data, intra=False)
     intra_derivative = compute_derivative(data, intra=True)
     inter_derivative = compute_derivative(data, intra=False)
     rad_1d, err_1d = compute_direction(data, period=1)
-    
+
     data["intra-diff"] = intra_diff
     data["inter-diff"] = inter_diff
     data["intra-derivative"] = intra_derivative
@@ -167,9 +166,14 @@ def pull_append_prepare_save(start, end, interval, data):
     raw = pull_dax(start, end, interval)
     raw = clean(raw)
     new_data = data[-200:].append(raw, ignore_index=True)
+    new_data = new_data.drop(columns=[data.columns[0]])
     new_data = prepare(new_data, False)
 
     data = data.append(new_data[200:])
+
+    data = data.drop(columns=[data.columns[0]])
+    data = data.reset_index(drop=True)
+
     save("{}-{}:{}".format(start,end, interval), data)
     return data
 

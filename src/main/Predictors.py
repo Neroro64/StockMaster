@@ -10,7 +10,7 @@ from sklearn.linear_model import BayesianRidge
 import plotly.express as px
 import DataManager
 
-PATH = "~/Documents/StockMaster/src/models/"
+PATH = "/home/nuoc/Documents/StockMaster/src/models/"
 RF_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle"]
 BAYES_FEATURES = ["inter-derivative", "1-rad", "bb-upper", "bb-lower", "bb-middle", "ema-cross", "rsi", "stoch-diff", "sar-diff", "macdsignal"]
 MLP_FEATURES = ["1-rad", "inter-derivative", 
@@ -67,12 +67,13 @@ def random_forests_train(data, test_size=0.2, filename=None, N=1000, max_depth=3
         fig.show()
 
     if not filename == None:
-        with open(filename+".model", 'wb') as f:
+        with open(PATH+filename+".model", 'wb') as f:
             pickle.dump(rf, f)
     return rf
 
 def random_forests_load(filename):
-    rf = pickle.load(filename+".model")
+    with open(PATH+filename+".model", 'rb') as f:
+        rf = pickle.load(f)
     return (rf, RF_FEATURES)
 
 
@@ -109,12 +110,13 @@ def bayes_train(data, test_size=0.2, filename=None, seed=2020, verbose=True):
         fig = px.scatter(x=predictions, y=test_labels)
         fig.show()
     if not filename == None:
-        with open(filename+".model", 'wb') as f:
+        with open(PATH+filename+".model", 'wb') as f:
             pickle.dump(clf, f)
     return clf
 
 def bayes_load(filename):
-    bayes = pickle.load(PATH+filename+".model")
+    with open(PATH+filename+".model", 'rb') as f:
+        bayes = pickle.load(f)
     return (bayes,BAYES_FEATURES)
 
 def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
@@ -146,12 +148,12 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
     model.evaluate(test_features,  test_labels, verbose=2)
 
     if not filename == None:
-        model.save(filename+".h5")
+        model.save(PATH+filename+".h5")
 
     return model
 
 def mlp_load(filename):
-    model = tf.keras.models.load_model(PATH+filename+".model")
+    model = tf.keras.models.load_model(PATH+filename+".h5")
     return (model, MLP_FEATURES)
 
 
@@ -163,13 +165,19 @@ def predict(predictor, data):
     predictions = model.predict(features)
     return predictions
 
-def evaluate(predictor, data, target):
+def evaluate(predictor, data, target="inter-diff", all=False):
     model = predictor[0]
     feature_list = predictor[1]
 
-    features = np.nan_to_num(data[feature_list].values[:-1])
+    if all:
+        features = data[feature_list].values
+        labels = data[target].values
+    else:
+        features = data[feature_list].values[:-1]
+        labels = data[target][1:].values
+
+    features = np.nan_to_num(features)
     features = normalize(features)
-    labels = data[target][1:].values
 
     predictions = model.predict(features).ravel()
     ae = np.abs(labels - predictions)
@@ -194,7 +202,7 @@ def compile_result(name, predictor, data, target="inter-diff", file=None):
         result_file.append(results, ignore_index=True)
         DataManager.save(file, result_file)
     else:
-        DataManager.save("results_tot", results)
+        DataManager.save(name+"_results", results)
 
     return predictions, mae, std
 
@@ -219,6 +227,19 @@ def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
     #     print(std)
     #     print("-"*70)
     
+def load_eval_save(name, data, filename=None):
+    if name == "RF":
+        predictor = random_forests_load("RF_2")
+    elif name == "BAYES":
+        predictor = bayes_load("BAYES_2")
+    elif name == "MLP":
+        predictor = mlp_load("MLP_2")
+    else:
+        return -1
+
+    predictions, mae, std = compile_result(name, predictor, data, "inter-diff")
+
+
 
 
 
