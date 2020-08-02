@@ -132,10 +132,10 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
     train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(N),
-        tf.keras.layers.Dense(4*N, activation='relu'),
-        tf.keras.layers.Dense(2*N, activation='relu'),
-        tf.keras.layers.Dense(N, activation='relu'),
-        tf.keras.layers.Dense(N/2, activation='relu'),
+        tf.keras.layers.Dense(128*N, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(64*N, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(1)
         ]) 
 
@@ -214,7 +214,7 @@ def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
         model = bayes_train(data, test_size, filename=filename, seed=2020, verbose=True)
         feature_list = BAYES_FEATURES
     elif name == "MLP":
-        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=1200)
+        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=600)
         feature_list = MLP_FEATURES
     else:
         return -1
@@ -229,11 +229,11 @@ def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
     
 def load_eval_save(name, data, filename=None):
     if name == "RF":
-        predictor = random_forests_load("RF_2")
+        predictor = random_forests_load(filename)
     elif name == "BAYES":
-        predictor = bayes_load("BAYES_2")
+        predictor = bayes_load(filename)
     elif name == "MLP":
-        predictor = mlp_load("MLP_2")
+        predictor = mlp_load(filename)
     else:
         return -1
 
