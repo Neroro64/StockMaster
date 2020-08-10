@@ -169,7 +169,7 @@ def pull_append_prepare_save(start, end, interval, data):
     new_data = new_data.drop(columns=[data.columns[0]])
     new_data = prepare(new_data, False)
 
-    data = data.append(new_data[200:])
+    data = data.append(new_data[200:], ignore_index=True)
 
     data = data.drop(columns=[data.columns[0]])
     data = data.reset_index(drop=True)
