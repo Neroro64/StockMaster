@@ -131,11 +131,11 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
     train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(N),
-        tf.keras.layers.Dense(256*N, activation='relu'),
+        tf.keras.layers.Dense(1024, activation='relu'),
         tf.keras.layers.Dropout(0.5),
-        # tf.keras.layers.Dense(64*N, activation='relu'),
-        # tf.keras.layers.Dropout(0.5),
-        # tf.keras.layers.Dense(32*N, activation='relu'),
+        tf.keras.layers.Dense(512, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(N, activation='relu'),
         # tf.keras.layers.Dropout(0.5),
         # tf.keras.layers.Dense(N, activation='relu'),
         tf.keras.layers.Dense(1)

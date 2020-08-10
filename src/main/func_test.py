@@ -15,7 +15,7 @@ import numpy as np
 #---------------------------------------------------------
 
 # LOAD APPEND
-data = manager.load("1997-01-01-2020-08-06:1d")
+data = manager.load("1997-01-01-2020-07-31:1d")
 # data1wk = manager.load("1997-01-01-2020-07-19:1wk")
 # data1mo = manager.load("1997-01-01-2020-07-19:1mo")
 
@@ -24,7 +24,7 @@ data = manager.load("1997-01-01-2020-08-06:1d")
 #---------------------------------------------------------
 
 # TRAIN EVAL SAVE
-pr.train_eval_save("MLP", data, filename="MLP_8")
+pr.train_eval_save("MLP", data, filename="MLP_4")
 # pr.train_eval_save("BAYES", data, filename="BAYES_3")
 # pr.train_eval_save("RF", data, filename="RF_3")
 #---------------------------------------------------------
