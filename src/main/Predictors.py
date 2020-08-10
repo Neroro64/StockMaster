@@ -125,17 +125,19 @@ def mlp_train(data, test_size=0.2,  filename=None, batch_size=100, epochs=800):
     features = data[feature_list]
     features = np.nan_to_num(features.values[:-1])
     features = normalize(features)
-
     targets = data["inter-diff"][1:]
     targets = targets.values
 
     train_features, test_features, train_labels, test_labels = train_test_split(features, targets, test_size = test_size, random_state = 2020)
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(N),
-        tf.keras.layers.Dense(128*N, activation='relu'),
+        tf.keras.layers.Dense(256*N, activation='relu'),
         tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(64*N, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
+        # tf.keras.layers.Dense(64*N, activation='relu'),
+        # tf.keras.layers.Dropout(0.5),
+        # tf.keras.layers.Dense(32*N, activation='relu'),
+        # tf.keras.layers.Dropout(0.5),
+        # tf.keras.layers.Dense(N, activation='relu'),
         tf.keras.layers.Dense(1)
         ]) 
 
@@ -206,7 +208,7 @@ def compile_result(name, predictor, data, target="inter-diff", file=None):
 
     return predictions, mae, std
 
-def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
+def train_eval_save(name, data, test_size=0.05, filename=None, log=True):
     if name == "RF":
         model = random_forests_train(data, test_size, filename=filename, N=1000, max_depth=30, seed=2020, verbose=True)
         feature_list = RF_FEATURES
@@ -214,12 +216,12 @@ def train_eval_save(name, data, test_size=0.1, filename=None, log=True):
         model = bayes_train(data, test_size, filename=filename, seed=2020, verbose=True)
         feature_list = BAYES_FEATURES
     elif name == "MLP":
-        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=600)
+        model = mlp_train(data, test_size, filename=filename, batch_size=100, epochs=400)
         feature_list = MLP_FEATURES
     else:
         return -1
     
-    predictions, mae, std = compile_result(name, (model, feature_list), data, "inter-diff")
+    predictions, mae, std = compile_result(filename, (model, feature_list), data, "inter-diff")
     # if log:
     #     print("Training results: ")
     #     print(predictions)
